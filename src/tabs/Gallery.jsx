@@ -1,7 +1,15 @@
 import { Component } from 'react';
 
 import * as ImageService from 'service/image-service';
-import { Button, SearchForm, Grid, GridItem, Text, CardItem } from 'components';
+import {
+  Button,
+  SearchForm,
+  Grid,
+  GridItem,
+  Text,
+  CardItem,
+  Loader,
+} from 'components';
 
 export class Gallery extends Component {
   state = {
@@ -10,20 +18,31 @@ export class Gallery extends Component {
     items: [],
     showBtn: false,
     isEmpty: false,
+    isLoading: false,
+    error: null,
   };
+
   componentDidUpdate(prevProps, prevState) {
     const { value, page } = this.state;
     if (prevState.value !== value || prevState.page !== page) {
-      ImageService.getImages(value, page).then(({ photos, total_results }) => {
-        if (!photos.length) {
-          this.setState({ isEmpty: true });
-          return;
-        }
-        this.setState(prevState => ({
-          items: [...prevState.items, ...photos],
-          showBtn: page < Math.ceil(total_results / 15),
-        }));
-      });
+      this.setState({ isLoading: true });
+      ImageService.getImages(value, page)
+        .then(({ photos, total_results }) => {
+          if (!photos.length) {
+            this.setState({ isEmpty: true });
+            return;
+          }
+          this.setState(prevState => ({
+            items: [...prevState.items, ...photos],
+            showBtn: page < Math.ceil(total_results / 15),
+          }));
+        })
+        .catch(error => {
+          this.setState({ error: error.message });
+        })
+        .finally(() => {
+          this.setState({ isLoading: false });
+        });
     }
   }
 
@@ -34,6 +53,7 @@ export class Gallery extends Component {
       items: [],
       showBtn: false,
       isEmpty: false,
+      error: null,
     });
   };
 
@@ -64,6 +84,10 @@ export class Gallery extends Component {
           <Button type="button" onClick={this.handleButton}>
             Load more
           </Button>
+        )}
+        {this.state.isLoading && <Loader />}
+        {this.state.error && (
+          <Text textAlign="center">Sorry. {this.state.error} ... 😭</Text>
         )}
       </>
     );
